@@ -1,0 +1,56 @@
+name: Build & Deploy FPL H2H
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Determine GW and build data (live)
+        run: |
+          python - <<'PY'
+          import requests, subprocess
+          r = requests.get("https://fantasy.premierleague.com/api/bootstrap-static/", timeout=30).json()
+          events = r["events"]
+          gw = None
+          for e in events:
+            if e.get("is_current"):
+              gw = e["id"]; break
+          if gw is None:
+            future = [e["id"] for e in events if not e["finished"]]
+            gw = min(future) if future else events[-1]["id"]
+          print("Using GW:", gw)
+          subprocess.check_call(["python","fpl_h2h.py","--gw",str(gw),"--mode","live"])
+          PY
+      - name: Prepare site
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp -r data _site/
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

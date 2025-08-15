@@ -1,0 +1,20 @@
+league_name: "Premier Mayo League"
+managers:
+  - name: "Elliot Thom"
+    team_name: "Holding Mids FC"
+    entry_id: 8724439
+  - name: "Marshall Wood"
+    team_name: "Marshallah"
+    entry_id: 3118086
+  - name: "Jackson Proctor"
+    team_name: "Brycense to Gil"
+    entry_id: 5695514
+  - name: "Nick Furigay"
+    team_name: "Project FC"
+    entry_id: 7663051
+  - name: "George Valaoras"
+    team_name: "115 Charges FC"
+    entry_id: 7454697
+  - name: "Manuel Lopez"
+    team_name: "Odefart"
+    entry_id: 7532380
