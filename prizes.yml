@@ -1,0 +1,52 @@
+version: 1
+pot:
+  managers: 6
+  buy_in_per_manager: 190
+  total_pot: 1140
+allocations:
+  weekly_top_scorer:
+    label: Weekly Top Scorer
+    per_gw_amount: 10
+    gameweeks: 38
+    total: 380
+  playoffs:
+    label: Playoffs (Top 4)
+    total: 350
+    champion: 200
+    runner_up: 100
+    third_place: 50
+  cups:
+    label: Cups
+    total: 210
+    autumn_cup_winner: 105
+    spring_cup_winner: 105
+  mystery_kits:
+    label: Mystery Kits
+    funded_from_pot: true
+    count: 4
+    unit_value: 50
+    total: 200
+    blocks:
+    - name: Block 1
+      gw_start: 1
+      gw_end: 10
+    - name: Block 2
+      gw_start: 11
+      gw_end: 20
+    - name: Block 3
+      gw_start: 21
+      gw_end: 30
+    - name: Block 4
+      gw_start: 31
+      gw_end: 38
+    rules:
+      winner_metric: most_total_points_in_block
+      tiebreakers:
+      - highest_single_gw_score_in_block
+      - coin_flip
+display:
+  currency: USD
+  show_weekly_running_total: true
+  show_kit_leaders_live: true
+metadata:
+  check_sum_matches_pot: true
