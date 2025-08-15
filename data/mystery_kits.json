@@ -1,0 +1,46 @@
+{
+  "blocks": [
+    {
+      "index": 1,
+      "name": "Block 1",
+      "gw_start": 1,
+      "gw_end": 10,
+      "status": "complete",
+      "leaders": [
+        {
+          "entry_id": 8724439,
+          "total_points": 612,
+          "best_single_gw": 88
+        },
+        {
+          "entry_id": 7663051,
+          "total_points": 600,
+          "best_single_gw": 85
+        }
+      ],
+      "current_top_total": 612,
+      "winners": [
+        8724439
+      ],
+      "tiebreak_used": false,
+      "note": "Elliot wins Block 1."
+    },
+    {
+      "index": 2,
+      "name": "Block 2",
+      "gw_start": 11,
+      "gw_end": 20,
+      "status": "in-progress",
+      "leaders": [
+        {
+          "entry_id": 7454697,
+          "total_points": 210,
+          "best_single_gw": 70
+        }
+      ],
+      "current_top_total": 210,
+      "winners": [],
+      "tiebreak_used": false
+    }
+  ]
+}

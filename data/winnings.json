@@ -1,0 +1,46 @@
+{
+  "currency": "USD",
+  "weekly": [
+    {
+      "pot_per_gw": 10
+    }
+  ],
+  "totals": [
+    {
+      "entry_id": 8724439,
+      "name": "Elliot",
+      "weekly_winnings": 40,
+      "kits_won": 1
+    },
+    {
+      "entry_id": 7663051,
+      "name": "Nick",
+      "weekly_winnings": 30,
+      "kits_won": 0
+    },
+    {
+      "entry_id": 7454697,
+      "name": "George",
+      "weekly_winnings": 20,
+      "kits_won": 0
+    },
+    {
+      "entry_id": 7532380,
+      "name": "Manny",
+      "weekly_winnings": 10,
+      "kits_won": 0
+    },
+    {
+      "entry_id": 5695514,
+      "name": "Jackson",
+      "weekly_winnings": 0,
+      "kits_won": 0
+    },
+    {
+      "entry_id": 3118086,
+      "name": "Marshall",
+      "weekly_winnings": 0,
+      "kits_won": 0
+    }
+  ]
+}
