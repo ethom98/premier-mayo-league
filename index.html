@@ -67,130 +67,145 @@
 
 <script>
 async function loadGW() {
-  const gw = Number(document.getElementById('gw').value);
+  var gw = Number(document.getElementById('gw').value);
 
-  // Load core data
-  const [sched, results, standings] = await Promise.all([
-    fetch('data/schedule.json').then(r=>r.json()),
-    fetch(`data/gw_${gw}_results.json`).then(r=>r.json()).catch(_=>({gw, matches:[], note:"No results yet"})),
-    fetch('data/standings.json').then(r=>r.json()).catch(_=>({teams:[]}))
-  ]);
+  // --- Load core data with safe fallbacks ---
+  var sched = { matches: [] };
+  try {
+    sched = await fetch('data/schedule.json').then(function(r){ return r.json(); });
+  } catch (e) {
+    console.warn('No schedule.json yet:', e);
+  }
 
-  // Build a quick entry_id -> name map from standings (used by kits table)
-  const idToName = {};
-  for (const t of (standings.teams || [])) {
+  var results = await fetch('data/gw_' + gw + '_results.json')
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return {gw: gw, matches: [], note: "No results yet"}; });
+
+  var standings = await fetch('data/standings.json')
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return {teams: []}; });
+
+  // id -> name map (used by Mystery Kits table)
+  var idToName = {};
+  (standings.teams || []).forEach(function(t){
     if (t.entry_id) idToName[t.entry_id] = t.name;
+  });
+
+  // ---------------- SCHEDULE (selected GW) ----------------
+  var sbody = document.querySelector('#schedule tbody');
+  if (sbody) {
+    sbody.innerHTML = '';
+    var rows = (sched.matches || []).filter(function(x){ return Number(x.gw) === gw; });
+
+    if (!sched.matches || sched.matches.length === 0) {
+      sbody.innerHTML = '<tr><td colspan="3" class="muted">No schedule.json found yet. Re-run the Action or check that fpl_h2h.py wrote data/schedule.json.</td></tr>';
+    } else if (rows.length === 0) {
+      sbody.innerHTML = '<tr><td colspan="3" class="muted">No fixtures for GW ' + gw + '.</td></tr>';
+    } else {
+      rows.forEach(function(m){
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + m.gw + '</td><td>' + m.home_name + '</td><td>' + m.away_name + '</td>';
+        sbody.appendChild(tr);
+      });
+    }
   }
 
-// --- Schedule (filter to selected GW unless "Show all" is checked) ---
-const sbody = document.querySelector('#schedule tbody');
-const statusEl = document.getElementById('sched-status');
-sbody.innerHTML = '';
-statusEl.textContent = '';
-
-const showAll = document.getElementById('showAll')?.checked;
-let rows = (sched.matches || []);
-if (!showAll) rows = rows.filter(x => Number(x.gw) === gw);
-
-if (!sched.matches || sched.matches.length === 0) {
-  sbody.innerHTML = `<tr><td colspan="3" class="muted">No schedule.json found yet. Re-run the Action or check that fpl_h2h.py wrote data/schedule.json.</td></tr>`;
-  statusEl.textContent = '';
-} else if (rows.length === 0) {
-  sbody.innerHTML = `<tr><td colspan="3" class="muted">No fixtures for GW ${gw}. Tick "Show all GWs" to view full schedule.</td></tr>`;
-  statusEl.textContent = `Found ${sched.matches.length} total fixtures`;
-} else {
-  for (const m of rows) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.gw}</td><td>${m.home_name}</td><td>${m.away_name}</td>`;
-    sbody.appendChild(tr);
+  // ---------------- RESULTS (selected GW) ----------------
+  var rbody = document.querySelector('#results tbody');
+  if (rbody) {
+    rbody.innerHTML = '';
+    (results.matches || []).forEach(function(m){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + m.home_name + ' vs ' + m.away_name + '</td>' +
+        '<td>' + m.home_points + ' - ' + m.away_points + '</td>' +
+        '<td>' + (m.status || '') + '</td>';
+      rbody.appendChild(tr);
+    });
   }
-  statusEl.textContent = showAll
-    ? `Showing all ${rows.length} fixtures`
-    : `Showing ${rows.length} fixture(s) for GW ${gw}`;
+
+  // ---------------- STANDINGS ----------------
+  var tBody = document.querySelector('#table tbody');
+  if (tBody) {
+    tBody.innerHTML = '';
+    (standings.teams || []).forEach(function(t){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + t.name + '</td>' +
+        '<td>' + t.played + '</td>' +
+        '<td>' + t.wins + '</td>' +
+        '<td>' + t.draws + '</td>' +
+        '<td>' + t.losses + '</td>' +
+        '<td>' + t.points_for + '</td>' +
+        '<td>' + t.points_against + '</td>' +
+        '<td>' + t.points + '</td>';
+      tBody.appendChild(tr);
+    });
+  }
+
+  // ---------------- WINNINGS (optional) ----------------
+  var wTable = document.querySelector('#winnings tbody');
+  var wNote = document.getElementById('winnings-note');
+  if (wTable) {
+    try {
+      var winnings = await fetch('data/winnings.json').then(function(r){ return r.json(); });
+      wTable.innerHTML = '';
+      var totals = (winnings.totals || []).slice().sort(function(a,b){
+        return (b.weekly_winnings || 0) - (a.weekly_winnings || 0);
+      });
+      totals.forEach(function(row){
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + row.name + '</td>' +
+          '<td>$' + Number(row.weekly_winnings || 0).toFixed(2) + '</td>' +
+          '<td>' + (row.kits_won || 0) + '</td>';
+        wTable.appendChild(tr);
+      });
+      if (wNote) {
+        var perGW = (winnings.weekly && winnings.weekly[0] && winnings.weekly[0].pot_per_gw) ? winnings.weekly[0].pot_per_gw : 10;
+        wNote.textContent = 'Weekly top scorer pays $' + perGW + ' per GW.';
+      }
+    } catch (e) {
+      wTable.innerHTML = '<tr><td colspan="3" class="muted">No winnings data yet.</td></tr>';
+      if (wNote) wNote.textContent = '';
+    }
+  }
+
+  // ---------------- MYSTERY KITS (optional) ----------------
+  var kitsDiv = document.getElementById('kits');
+  if (kitsDiv) {
+    try {
+      var kits = await fetch('data/mystery_kits.json').then(function(r){ return r.json(); });
+      kitsDiv.innerHTML = '';
+      (kits.blocks || []).forEach(function(b){
+        // Build leaders lines first
+        var leaderLines = (b.leaders || [])
+          .sort(function(a,b_){ return (b_.total_points || 0) - (a.total_points || 0); })
+          .map(function(l){
+            var nm = idToName[l.entry_id] || l.entry_id;
+            return nm + ' — ' + l.total_points + ' pts (best GW: ' + l.best_single_gw + ')';
+          });
+        // Winners names
+        var winners = (b.winners || []).map(function(eid){ return idToName[eid] || eid; });
+
+        var div = document.createElement('div');
+        div.style.marginBottom = '12px';
+        div.innerHTML =
+          '<div style="font-weight:600">' + b.name + ' (GW' + b.gw_start + '–' + b.gw_end + ')</div>' +
+          '<div>Status: ' + b.status + '</div>' +
+          '<div>Leaders: ' + (leaderLines.length ? leaderLines.join('<br>') : '—') + '</div>' +
+          (b.status === 'complete'
+            ? ('<div>Winner' + (winners.length>1?'s':'') + ': ' + (winners.length ? winners.join(', ') : '—') + '</div>')
+            : '') +
+          (b.note ? ('<div class="muted">' + b.note + '</div>') : '') +
+          '<hr>';
+        kitsDiv.appendChild(div);
+      });
+    } catch (e) {
+      kitsDiv.innerHTML = '<div class="muted">No mystery kit data yet.</div>';
+    }
+  }
 }
 
-  // ----- Results for selected GW -----
-  const rbody = document.querySelector('#results tbody');
-  rbody.innerHTML = '';
-  for (const m of (results.matches || [])) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${m.home_name} vs ${m.away_name}</td>
-                    <td>${m.home_points} - ${m.away_points}</td>
-                    <td>${m.status || ''}</td>`;
-    rbody.appendChild(tr);
-  }
-
-  // ----- Standings -----
-  const tbody = document.querySelector('#table tbody');
-  tbody.innerHTML = '';
-  for (const t of (standings.teams || [])) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${t.name}</td><td>${t.played}</td><td>${t.wins}</td><td>${t.draws}</td>
-                    <td>${t.losses}</td><td>${t.points_for}</td><td>${t.points_against}</td><td>${t.points}</td>`;
-    tbody.appendChild(tr);
-  }
-
-  // ----- Winnings (reads data/winnings.json) -----
-  try {
-    const winnings = await fetch('data/winnings.json').then(r=>r.json());
-    // winnings = { currency, weekly: [...], totals: [{entry_id,name,weekly_winnings,kits_won}, ...] }
-    const wtbody = document.querySelector('#winnings tbody');
-    const wnote  = document.querySelector('#winnings-note');
-    wtbody.innerHTML = '';
-
-    const totals = (winnings.totals || []).slice().sort((a,b)=> (b.weekly_winnings||0) - (a.weekly_winnings||0));
-    for (const row of totals) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${row.name}</td>
-                      <td>$${Number(row.weekly_winnings||0).toFixed(2)}</td>
-                      <td>${row.kits_won || 0}</td>`;
-      wtbody.appendChild(tr);
-    }
-    wnote.textContent = `Weekly top scorer pays $${(winnings?.weekly?.[0]?.pot_per_gw ?? 10)} per GW.`;
-  } catch (e) {
-    const wtbody = document.querySelector('#winnings tbody');
-    wtbody.innerHTML = '<tr><td colspan="3" class="muted">No winnings data yet.</td></tr>';
-  }
-
-  // ----- Mystery Kits (reads data/mystery_kits.json) -----
-  try {
-    const kits = await fetch('data/mystery_kits.json').then(r=>r.json());
-    // kits = { blocks: [{index,name,gw_start,gw_end,status,leaders:[{entry_id,total_points,best_single_gw}], current_top_total, winners:[entry_id], tiebreak_used, note}, ...] }
-    const container = document.getElementById('kits');
-    container.innerHTML = '';
-
-    for (const b of (kits.blocks || [])) {
-      // Turn IDs into names for leaders & winners
-      const leaderLines = (b.leaders || [])
-        .sort((a,b_) => (b_.total_points||0) - (a.total_points||0))
-        .map(l => {
-          const nm = idToName[l.entry_id] || l.entry_id;
-          return `${nm} — ${l.total_points} pts (best GW: ${l.best_single_gw})';
-        });
-
-      const winners = (b.winners || []).map(eid => idToName[eid] || eid);
-
-      const div = document.createElement('div');
-      div.style.marginBottom = '12px';
-      div.innerHTML = `
-        <div style="font-weight:600">${b.name} (GW${b.gw_start}–${b.gw_end})</div>
-        <div>Status: ${b.status}</div>
-        <div>Leaders: ${leaderLines.length ? leaderLines.join('<br>') : '—'}</div>
-        ${b.status === 'complete'
-            ? `<div>Winner${winners.length>1?'s':''}: ${winners.length ? winners.join(', ') : '—'}</div>`
-            : ''
-        }
-        ${b.note ? `<div class="muted">${b.note}</div>` : ''}
-        <hr>
-      `;
-      container.appendChild(div);
-    }
-  } catch (e) {
-    const container = document.getElementById('kits');
-    container.innerHTML = '<div class="muted">No mystery kit data yet.</div>';
-  }
-}
 loadGW();
 </script>
-</body>
-</html>
