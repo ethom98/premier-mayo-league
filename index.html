@@ -80,7 +80,7 @@ async function loadGW() {
   // ----- Schedule -----
   const sbody = document.querySelector('#schedule tbody');
   sbody.innerHTML = '';
-  for (const m of sched.matches) {
+  for (const m of sched.matches.filter(x => Number(x.gw) === gw)) {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${m.gw}</td><td>${m.home_name}</td><td>${m.away_name}</td>`;
     sbody.appendChild(tr);
